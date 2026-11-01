@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Obsidian Agent</title>
+</head>
+<body>
+  <div id="app"></div>
+  <!-- 全局 toast 提示（App.vue toast() 依赖此元素；缺失会导致 toast 抛 TypeError，
+       被 try/catch 误判为保存失败 → 开关/操作状态回滚，表现为"点击没反应"） -->
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

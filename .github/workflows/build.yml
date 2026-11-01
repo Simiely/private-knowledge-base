@@ -1,0 +1,74 @@
+name: Build and Push Image
+
+# 自动把仓库构建成 Docker 镜像并推送到 ghcr.io。
+# 触发：push 到 main 分支，或手动在 Actions 页面点 Run workflow。
+# 效果：部署端执行 `docker compose pull && docker compose up -d` 即可拿到最新代码对应的镜像。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write   # 推送镜像到 ghcr.io 需要
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # frontend/dist 被 .gitignore 排除，干净的 checkout 上不存在；
+      # test_static_index_served 依赖它，必须先构建前端再跑 pytest
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Run tests
+        run: pytest -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ghcr.io 要求镜像名全小写，而仓库名带大写(Simiely)，这里转小写
+      - name: Set lowercase image name
+        run: echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # 镜像名与 docker-compose.yml / scripts/build-push.sh 保持一致（全小写）
+          tags: ${{ env.IMAGE }}:latest

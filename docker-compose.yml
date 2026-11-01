@@ -1,0 +1,79 @@
+# ===== Obsidian Knowledge · Docker Compose =====
+# 本地构建 + 单用户登录 + MCP 只读服务 + Caddy HTTPS
+# 启动：docker compose up -d --build
+# Windows 请在 .env 设置 VAULT_HOST_PATH / DATA_HOST_PATH（用正斜杠，如 C:/Users/...）
+
+services:
+  web:
+    build:
+      context: .
+      # SEMANTIC_ENABLED=true 时把 fastembed 装进镜像（自带 ONNX，镜像 +约 200MB）
+      args:
+        INSTALL_SEMANTIC: ${SEMANTIC_ENABLED:-false}
+    image: obsidian-knowledge:local
+    container_name: obsidian-knowledge
+    # 非 root（Dockerfile 内 appuser UID=1000）；Windows bind mount 写入失败时见 docs/部署-Windows.md
+    user: "1000:1000"
+    ports:
+      - "4329:8080"
+    environment:
+      - VAULT_PATH=/vault
+      - DATA_DIR=/data
+      - BACKUP_DIR=/data/backups
+      - AUTH_TOKEN=${AUTH_TOKEN:?请设置 AUTH_TOKEN}
+      - AUTH_DISABLED=${AUTH_DISABLED:-false}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - ENABLE_LOCAL_SETTINGS=${ENABLE_LOCAL_SETTINGS:-false}
+      - WATCH_ENABLED=${WATCH_ENABLED:-true}
+      - WATCH_POLLING=${WATCH_POLLING:-false}
+      - SEMANTIC_ENABLED=${SEMANTIC_ENABLED:-false}
+      - SEMANTIC_MODEL=${SEMANTIC_MODEL:-BAAI/bge-small-zh-v1.5}
+      - SEMANTIC_WEIGHT=${SEMANTIC_WEIGHT:-1.5}
+      - HF_ENDPOINT=${HF_ENDPOINT:-https://hf-mirror.com}
+      - TZ=${TZ:-Asia/Shanghai}
+    volumes:
+      - ${VAULT_HOST_PATH:-./vault}:/vault
+      - ${DATA_HOST_PATH:-./data}:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mcp:
+    build: .
+    image: obsidian-knowledge:local
+    container_name: obsidian-knowledge-mcp
+    user: "1000:1000"
+    command: ["python", "-m", "app.mcp.server"]
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      - MCP_API_BASE=http://web:8080
+      - AUTH_TOKEN=${AUTH_TOKEN:?请设置 AUTH_TOKEN}
+      - MCP_TOKEN=${MCP_TOKEN:?请设置 MCP_TOKEN}
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8090
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    container_name: obsidian-knowledge-caddy
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

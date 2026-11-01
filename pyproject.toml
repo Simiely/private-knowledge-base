@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "obsidian-agent"
+version = "0.1.0"
+description = "Dockerized Obsidian AI workspace: browse, edit, full-text search and AI agent over your vault"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "jieba>=0.42",
+    "watchdog>=5.0",
+    "httpx>=0.27",
+    "pydantic-ai>=1.0",
+    "python-multipart>=0.0.12",
+    "pypinyin>=0.51",
+    "rapidfuzz>=3.9",
+    "mcp>=2.0",
+]
+
+[project.optional-dependencies]
+# 语义检索：本地 CPU embedding（bge-small-zh ONNX），不装则自动降级为关键词检索
+semantic = ["fastembed>=0.4"]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI 标准模式：Depends()/Query()/Header() 等在默认参数中调用（B008）
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Cookie",
+    "fastapi.File",
+    "fastapi.Form",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

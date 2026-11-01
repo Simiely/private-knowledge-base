@@ -1,0 +1,8 @@
+# 局域网 HTTPS：自签内部证书，手机首次访问需信任
+# 单用户登录由应用本身负责；如需再加一层，取消 basic_auth 注释并生成哈希：
+# caddy hash-password --plaintext 'your-password'
+:8443 {
+	tls internal
+	encode zstd gzip
+	reverse_proxy web:8080
+}
