@@ -61,7 +61,11 @@ def win_special_folder(csidl: int) -> str | None:
         from ctypes import wintypes
 
         buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-        fn = ctypes.windll.shell32.SHGetFolderPathW
+        # windll 只存在于 Windows typeshed；getattr 兜底让 Linux 上的 mypy 也能通过
+        windll = getattr(ctypes, "windll", None)
+        if windll is None:
+            return None
+        fn = windll.shell32.SHGetFolderPathW
         fn.argtypes = [
             wintypes.HWND,
             ctypes.c_int,
@@ -199,7 +203,11 @@ def open_in_file_manager(path: str | Path) -> bool:
         raise RuntimeError(f"目录不存在: {p}")
     try:
         if os.name == "nt":
-            os.startfile(p)  # Windows 专有
+            # startfile 只存在于 Windows typeshed；getattr 兜底兼容 Linux 上的静态检查
+            starter = getattr(os, "startfile", None)
+            if starter is None:
+                raise RuntimeError("当前平台不支持打开目录")
+            starter(p)
         elif sys.platform == "darwin":
             subprocess.Popen(["open", p])
         else:
