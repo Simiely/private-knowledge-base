@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 import logging
-import threading
 from pathlib import Path
 from typing import Any
 
@@ -186,13 +185,12 @@ def set_vault(
                 f"备份目录（{settings.resolved_backup_dir}）不能位于所选 vault 内部，请换一个路径",
             )
 
-        # 1. 停止旧服务
-        services.index.stop_watcher()
-        services.backup_scheduler.stop()
+        # 1. 停止旧服务（后台重建仍在跑时等待，避免关闭正在使用的 SQLite 连接）
         try:
-            services.index.backend.close()
+            services.index.shutdown(timeout=5)
         except Exception:  # pragma: no cover - 关闭失败不阻塞切换
-            logger.warning("关闭旧索引库连接失败（忽略）", exc_info=True)
+            logger.warning("关闭旧索引服务失败（忽略）", exc_info=True)
+        services.backup_scheduler.stop()
 
         # 2. 重建全套服务
         settings.vault_path = new_path
@@ -206,15 +204,7 @@ def set_vault(
         if settings.watch_enabled:
             new_services.index.start_watcher(settings.watch_debounce_seconds)
         new_services.backup_scheduler.start()
-
-        def _rebuild() -> None:
-            try:
-                new_services.index.full_rebuild()
-                logger.info("切换后索引重建完成 total=%s", new_services.index.backend.total_docs())
-            except Exception:  # pragma: no cover
-                logger.exception("切换后索引重建失败")
-
-        threading.Thread(target=_rebuild, daemon=True, name="vault-switch-rebuild").start()
+        new_services.index.start_rebuild()  # 后台重建，线程由 shutdown 统一回收
 
         # 4. 持久化（下次启动自动加载）
         try:

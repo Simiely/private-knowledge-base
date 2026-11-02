@@ -8,9 +8,10 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from app.core.indexer.base import IndexBackend, IndexDoc, IndexRow
 from app.core.markdown import parse as parse_markdown
@@ -32,11 +33,14 @@ class IndexService:
         self.watcher: VaultWatcher | None = None
         self.semantic: SemanticIndex | None = None  # runtime 注入；None = 未启用语义检索
         self._building = False
+        self._rebuild_thread: threading.Thread | None = None
+        self._start_lock = threading.Lock()
 
     @property
-    def building(self) -> bool:
-        """索引是否正在构建（供 API 层只读检查，避免直接访问私有字段）。"""
-        return self._building
+    def rebuilding(self) -> bool:
+        """是否正在重建（含已启动但尚未置位 _building 的后台线程）。"""
+        thread = self._rebuild_thread
+        return self._building or (thread is not None and thread.is_alive())
 
     # ---------- 文档转换 ----------
 
@@ -87,6 +91,40 @@ class IndexService:
             return {"state": "ready", "total": count, "indexed": done}
         finally:
             self._building = False
+
+    def start_rebuild(self) -> bool:
+        """启动后台全量重建；已有任务在跑则返回 False（供 API 返回 409）。"""
+        with self._start_lock:
+            if self.rebuilding:
+                return False
+            self._rebuild_thread = threading.Thread(
+                target=self._rebuild_safe, daemon=True, name="index-rebuild"
+            )
+            self._rebuild_thread.start()
+            return True
+
+    def _rebuild_safe(self) -> None:
+        """后台重建入口：异常只记日志，不抛给解释器（线程异常会污染测试/日志）。"""
+        try:
+            self.full_rebuild()
+        except Exception:  # pragma: no cover - 线程内异常统一记录
+            logger.exception("后台索引重建失败")
+
+    def shutdown(self, timeout: float = 30.0) -> None:
+        """停止 watcher 并关闭索引库；后台重建未结束则等待。
+
+        参数：
+            timeout: 等待后台重建线程的秒数；仍存活时跳过 close，
+                交给进程退出回收，避免跨线程关闭 SQLite（Windows access violation）。
+        """
+        self.stop_watcher()
+        thread = self._rebuild_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout)
+            if thread.is_alive():
+                logger.warning("后台索引重建仍在运行，跳过索引库关闭（进程退出时回收）")
+                return
+        self.backend.close()
 
     def update_paths(self, paths: set[str]) -> dict[str, Any]:
         """增量更新（watchdog 回调）：存在则 upsert，不存在则 remove。"""
@@ -165,21 +203,21 @@ class IndexService:
         fuzzy = getattr(backend, "fuzzy_rows", None)
         if fuzzy is None:
             return []
-        return fuzzy(query, limit, offset)
+        return cast("Callable[[str, int, int], list[IndexRow]]", fuzzy)(query, limit, offset)
 
     def list_tags(self) -> list[dict[str, Any]]:
         backend = self.backend
         list_tags = getattr(backend, "list_tags", None)
         if list_tags is None:
             return []
-        return list_tags()
+        return cast("Callable[[], list[dict[str, Any]]]", list_tags)()
 
     def get_by_doc_id(self, doc_id: str) -> IndexRow | None:
         backend = self.backend
         getter = getattr(backend, "get_by_doc_id", None)
         if getter is None:
             return None
-        return getter(doc_id)
+        return cast("Callable[[str], IndexRow | None]", getter)(doc_id)
 
     def iter_docs(self) -> list[dict[str, str]]:
         """全部文档快照（语义向量重建用；后端不支持时返回空）。"""
@@ -187,7 +225,7 @@ class IndexService:
         lister = getattr(backend, "iter_docs", None)
         if lister is None:
             return []
-        return lister()
+        return cast("Callable[[], list[dict[str, str]]]", lister)()
 
 
 def _safe_decode(data: bytes) -> str | None:

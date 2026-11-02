@@ -54,7 +54,7 @@ class SemanticIndex:
         self._error: str | None = None
         self._ready = False
         self._building = False
-        self._cache: list[tuple[str, array]] | None = None
+        self._cache: list[tuple[str, array[float]]] | None = None
         self._init_schema()
 
     # ---------- schema ----------
@@ -181,7 +181,7 @@ class SemanticIndex:
         scored.sort(key=lambda item: item[1], reverse=True)
         return scored[: (top_k or self.top_k)]
 
-    def _load_cache(self) -> list[tuple[str, array]]:
+    def _load_cache(self) -> list[tuple[str, array[float]]]:
         if self._cache is not None:
             return self._cache
         with self._lock:
@@ -239,7 +239,7 @@ def _normalize(vec: list[float]) -> list[float]:
     return [x / norm for x in vec]
 
 
-def _dot(a: list[float], b: array) -> float:
+def _dot(a: list[float], b: array[float]) -> float:
     return sum(x * y for x, y in zip(a, b, strict=True))
 
 
@@ -247,7 +247,7 @@ def _pack(vec: list[float]) -> bytes:
     return array("f", vec).tobytes()
 
 
-def _unpack(blob: bytes) -> array:
+def _unpack(blob: bytes) -> array[float]:
     arr = array("f")
     arr.frombytes(blob)
     return arr

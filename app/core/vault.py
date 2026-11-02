@@ -16,9 +16,12 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.core.textcodec import safe_decode
+
+if TYPE_CHECKING:
+    from watchdog.observers.api import BaseObserver
 
 logger = logging.getLogger("obsidian-agent.vault")
 
@@ -321,7 +324,8 @@ class VaultWatcher:
         on_change: Callable[[set[str]], Any] | None = None,
         polling: bool = False,
     ) -> None:
-        # 延迟导入，非核心路径不依赖 watchdog
+        # 延迟导入，非核心路径不依赖 watchdog；两个分支实现类型不同，统一标注
+        observer: BaseObserver
         if polling:
             from watchdog.observers.polling import PollingObserver
 

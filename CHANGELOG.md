@@ -5,6 +5,13 @@
 
 ## Unreleased
 
+### 2026-11-02 · 质量门禁（R6）✅
+
+- 修复 `mypy --strict` 10 个错误：`semantic.py` 的 `array` 补 `array[float]` 泛型、`indexer/service.py` 可选后端方法改用 `cast` 收窄、`vault.py` 的 observer 统一标注 `BaseObserver`
+- 新增 `scripts/check.sh`（Linux/CI）与 `scripts/check.ps1`（Windows），一条命令跑 ruff → mypy → pytest，任一失败即非零退出
+- 修复后台重建线程未回收：`POST /api/index/rebuild` 与切换库触发的后台重建统一改走 `IndexService.start_rebuild()`，关停时 `shutdown()` 先 join 再关 SQLite——消除 `closed database` 告警与跨线程 close 崩溃风险
+- 实测：`ruff` / `mypy` 0 错误，`pytest` **173 passed**（新增后台重建关闭回归用例）
+
 ### 2026-11-02 · 版本恢复 UI + 语义检索（P4 补完 / P6）✅
 
 - **P4 补完**：设置页新增「备份与版本」面板（立即备份 / 快照列表 / 整库恢复需输入 RESTORE / 删除）；阅读页新增「版本历史」弹窗，可恢复到任一快照或写前备份

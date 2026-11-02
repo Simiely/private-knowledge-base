@@ -205,3 +205,30 @@ def test_concurrent_build_and_query(index: Fts5Index) -> None:
     # 锁未死锁、操作全部正常；结束后重建确认可用
     index.build(make_docs(), batch_size=1)
     assert index.count("中文") >= 1
+
+
+def test_background_rebuild_joined_on_shutdown(
+    svc: tuple[Vault, IndexService], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """关闭时先等后台重建结束再关库，避免跨线程 close SQLite（回归 closed database 告警）。"""
+    import threading
+    import time
+
+    _, index_service = svc
+    original_build = index_service.backend.build
+    finished = threading.Event()
+
+    def slow_build(docs, batch_size=200):
+        time.sleep(0.3)  # 留出窗口：让 shutdown 撞上正在执行的重建
+        count = original_build(docs, batch_size)
+        finished.set()
+        return count
+
+    monkeypatch.setattr(index_service.backend, "build", slow_build)
+
+    assert index_service.start_rebuild() is True
+    assert index_service.start_rebuild() is False  # 并发触发应被拒绝
+    index_service.shutdown()
+
+    assert finished.is_set(), "shutdown 未等待后台重建完成"
+    assert index_service.rebuilding is False

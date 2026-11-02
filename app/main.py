@@ -94,7 +94,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if boot_thread.is_alive():  # pragma: no cover - 大库超时场景
             logger.warning("初始索引仍在运行，跳过索引库连接关闭（进程退出时回收）")
         else:
-            current.index.backend.close()
+            # 等后台重建（API 触发 / 切换库触发）结束再关连接，防跨线程 close SQLite
+            current.index.shutdown()
 
     app = FastAPI(
         title="Obsidian Agent",

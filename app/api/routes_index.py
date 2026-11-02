@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import threading
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,7 +20,6 @@ def status(services: AppServices = Depends(get_services)) -> dict[str, Any]:
 
 @router.post("/rebuild", status_code=202)
 def rebuild(services: AppServices = Depends(get_services)) -> dict[str, Any]:
-    if services.index.building:
+    if not services.index.start_rebuild():
         raise HTTPException(409, "索引正在构建中")
-    threading.Thread(target=services.index.full_rebuild, daemon=True, name="api-rebuild").start()
     return {"ok": True, "message": "全量重建已启动"}
