@@ -12,8 +12,8 @@ services:
         INSTALL_SEMANTIC: ${SEMANTIC_ENABLED:-false}
     image: obsidian-knowledge:local
     container_name: obsidian-knowledge
-    # 非 root（Dockerfile 内 appuser UID=1000）；Windows bind mount 写入失败时见 docs/部署-Windows.md
-    user: "1000:1000"
+    # 入口脚本以 root 启动：先 chown /data、/vault 再 gosu 降权到 appuser(UID 1000)。
+    # 如目录在 exFAT/NTFS 上 chown 无效，再显式加 user: "0:0"（见 docs/部署-Windows.md）
     ports:
       - "4329:8080"
     environment:
@@ -47,7 +47,6 @@ services:
     build: .
     image: obsidian-knowledge:local
     container_name: obsidian-knowledge-mcp
-    user: "1000:1000"
     command: ["python", "-m", "app.mcp.server"]
     ports:
       - "127.0.0.1:8090:8090"

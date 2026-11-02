@@ -5,6 +5,13 @@
 
 ## Unreleased
 
+### 2026-11-03 · Docker 挂载目录权限自动化 ✅
+
+- 新增 `docker-entrypoint.sh`：容器以 root 启动时先 `chown -R appuser:appuser /data /vault`，再用 `gosu` 降权到 appuser 运行（对齐 Radicale 等镜像的做法），解决 USB/外置盘挂载目录归 root 导致的 `unable to open database file`
+- Dockerfile 安装 `gosu`、移除 `USER appuser` 改由入口降权；`docker-compose.yml` 不再写死 `user: "1000:1000"`
+- 新增 `.gitattributes` 强制 `*.sh` 使用 LF，避免 Windows 本地构建镜像时 shebang 带 CRLF 启动失败
+- 入口支持 `FIX_OWNER_DIRS` 自定义需要修正属主的目录（默认 `/data /vault`）；exFAT/NTFS 上 chown 失败会自动跳过
+
 ### 2026-11-02 · 质量门禁（R6）✅
 
 - 修复 `mypy --strict` 10 个错误：`semantic.py` 的 `array` 补 `array[float]` 泛型、`indexer/service.py` 可选后端方法改用 `cast` 收窄、`vault.py` 的 observer 统一标注 `BaseObserver`

@@ -37,12 +37,20 @@ RUN if [ "$INSTALL_SEMANTIC" = "true" ]; then \
 COPY --from=frontend /frontend/dist ./frontend/dist
 
 # 非 root 运行（坑 #3：PUID/PGID 映射）
-RUN useradd -m -u 1000 appuser && mkdir -p /vault /data && chown -R appuser:appuser /app /vault /data
-USER appuser
+# 入口脚本以 root 启动：先 chown 挂载目录，再用 gosu 降权到 appuser（同 Radicale 思路）
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN useradd -m -u 1000 appuser \
+    && mkdir -p /vault /data \
+    && chown -R appuser:appuser /app /vault /data \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health')"
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

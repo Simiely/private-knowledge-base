@@ -47,11 +47,12 @@ docker compose up -d --build
 
 ## 4. 权限
 
-- 容器以 UID 1000 运行；Windows Docker Desktop 的 bind mount 权限模型不同。
-- 如果出现 `attempt to write a readonly database` 或无法写 vault：
-  1. 确认 `DATA_HOST_PATH` 可写；
-  2. 临时把 compose 的 `user` 改为 `root` 仅用于验证；
-  3. 长期仍建议非 root，或改用 WSL2 内的 gocryptfs/卷。
+- 容器入口以 root 启动：先对 `/data`、`/vault` 执行 `chown -R appuser:appuser`，再用 `gosu` 降权到 appuser（UID 1000）运行主进程（同 Radicale 的做法）。
+- 因此 USB/NTFS 等挂载目录归 root 时，一般不需要再手动改 `user` 或 `chown`。
+- 如果目录在 **exFAT/FAT32** 上，`chown` 本身无效，入口会忽略失败继续启动；此时若仍报 `unable to open database file` / 无法写 vault：
+  1. 临时把 compose 的 `user` 设为 `"0:0"` 验证；
+  2. 长期方案：挂载时指定属主（`uid=1000,gid=1000`），或把 `/data` 放到内置 ext4 盘。
+- 目录很大时 `chown -R /vault` 会拖慢启动，可用 `FIX_OWNER_DIRS=/data` 只修数据目录。
 
 ## 5. 文件监听
 
