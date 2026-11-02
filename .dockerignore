@@ -1,0 +1,28 @@
+# Docker 构建上下文裁剪：程序目录里的运行时数据/虚拟环境不该进镜像构建
+.git
+.gitignore
+.venv
+.venv*/
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# 运行时数据（索引库 / 向量 / 备份 / 快照）——放在程序目录下时必须排除
+data
+backups
+backups-alt
+vault
+vaults
+
+# 前端本地产物与依赖（镜像内会重新构建）
+frontend/node_modules
+frontend/dist
+
+# 密钥与文档、测试
+.env
+docs
+tests
+scripts
+*.zip

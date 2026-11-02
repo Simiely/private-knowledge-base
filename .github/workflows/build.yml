@@ -1,0 +1,95 @@
+name: Build and Push Image
+
+# 把仓库构建成 Docker 镜像并推送到 GHCR（ghcr.io）。
+# 触发：push 到 main、打 v* 标签，或在 Actions 页面手动 Run workflow。
+# 部署端：DPanel / docker compose 直接 pull 镜像，见 README 的「Dpanel 部署」。
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write   # 推送镜像到 ghcr.io 需要
+
+env:
+  # ghcr.io 要求全小写；仓库名 Simiely 含大写，这里固定小写镜像名
+  IMAGE: ghcr.io/simiely/private-knowledge-base
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # frontend/dist 被 .gitignore 排除，干净 checkout 上不存在；
+      # test_static_index_served 依赖它，必须先构建前端再跑 pytest
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Run tests
+        run: |
+          ruff check app tests
+          mypy app
+          pytest -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 语义检索依赖默认不装（镜像小、构建快）；需要时把下面改成 true 再重跑
+          build-args: |
+            INSTALL_SEMANTIC=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
