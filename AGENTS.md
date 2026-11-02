@@ -55,4 +55,5 @@ docker compose up -d
 
 - @docs/02-架构设计.md（分层、模块职责、数据流、选型依据）
 - @docs/08-踩坑记录.md（40+ 条实测坑，按索引/部署/Agent/前端分区）
+- @docs/部署-DPanel.md（DPanel + USB 部署、GHCR 镜像、入口降权与排障）
 - @docs/06-开发指南.md ｜ @docs/04-配置参考.md ｜ @docs/05-API参考.md

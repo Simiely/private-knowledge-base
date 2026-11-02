@@ -11,6 +11,7 @@
 - Dockerfile 安装 `gosu`、移除 `USER appuser` 改由入口降权；`docker-compose.yml` 不再写死 `user: "1000:1000"`
 - 新增 `.gitattributes` 强制 `*.sh` 使用 LF，避免 Windows 本地构建镜像时 shebang 带 CRLF 启动失败
 - 入口支持 `FIX_OWNER_DIRS` 自定义需要修正属主的目录（默认 `/data /vault`）；exFAT/NTFS 上 chown 失败会自动跳过
+- 新增 [docs/部署-DPanel.md](docs/部署-DPanel.md)：记录 DPanel 粘贴 compose、GHCR 公开镜像、USB 目录布局、`data/settings.json` 覆盖 VAULT_PATH 的坑、排障速查
 
 ### 2026-11-02 · 质量门禁（R6）✅
 

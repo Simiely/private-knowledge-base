@@ -82,6 +82,7 @@ $env:MCP_TOKEN="mcp-token"
 | 文档 | 用途 |
 |---|---|
 | **[docs/部署-Windows.md](docs/部署-Windows.md)** | Windows + Docker/WSL2 部署、端口、权限、备份、常见问题 |
+| **[docs/部署-DPanel.md](docs/部署-DPanel.md)** | DPanel 粘贴 compose 部署、GHCR 镜像、USB 挂载与权限、排障 |
 | **[docs/MCP接入.md](docs/MCP接入.md)** | MCP 地址、鉴权、工具清单、本地模型客户端配置 |
 | **[AGENTS.md](AGENTS.md)** | 技术栈、关键坑、代码约定、常用命令（改代码前必读） |
 | **[CHANGELOG.md](CHANGELOG.md)** | 版本摘要 |
