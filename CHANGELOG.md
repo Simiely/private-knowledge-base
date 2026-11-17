@@ -3,6 +3,14 @@
 版本号遵循语义化版本；未发布内容记在 `Unreleased`，发布时移入具体版本。
 逐条原始记录见 [`docs/07-更新日志.md`](docs/07-更新日志.md)，本文件只做摘要。
 
+## Unreleased · 2026-11-17
+
+- 接入 knowledge-base 的**单项目规范**（spec 2.1.3 / repo-kit 2.7.3，profile `link-only`）
+- 新增 `schema/taxonomy.json`、`tools/repo-kit/`、`tools/update-repo-kit.ps1`、`schema/kit.lock.json` 与 CI
+- 修 `docs/03-快速开始.md` 指向 `04-配置参考.md#权限` 的坏锚点
+- CI 显式安装文档依赖：本仓用 `pyproject.toml` 声明应用依赖，不另建 requirements.txt
+- - 验收：`REPO CHECK: PASS`（ERROR=0）、`KIT LOCK: PASS (v2.7.3, spec=2.1.3)`
+
 ## Unreleased
 
 ### 2026-11-03 · Docker 挂载目录权限自动化 ✅
