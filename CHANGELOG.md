@@ -5,6 +5,7 @@
 
 ## Unreleased · 2026-11-18
 
+- README 溯源行标注「源仓库 `Simiely/obsidian-agent` 已于 2026-11-18 删除」：避免后来者按名字找仓库找到 404；本仓不依赖它，代码自带
 - 文档机器层从 `link-only` 升到 `knowledge`（kit 2.7.4 / spec 2.1.3）：13 篇旧文档补 frontmatter，新增 32 个 `kind: pitfall` 页
 - `docs/08-踩坑记录.md` 改为纯索引：30 条日期式坑 + 2 条真实事故（容器看不到宿主磁盘、备份目录在容器可写层）一坑一篇，正文在 `docs/pitfalls/`
 - 生成物接入：`llms.txt`、`docs/_generated/index.md`、`backlinks.md`、`pitfalls.md`（7 条 active / 25 条 resolved）
