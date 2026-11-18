@@ -1,6 +1,6 @@
 # AGENTS.md · 项目规则
 
-> 📌 **文档基线**：2026-11-18（commit 待填）坑页迁移 + 升 knowledge profile
+> 📌 **文档基线**：2026-11-18（commit 2831299）坑页迁移 + 升 knowledge profile
 > **更新文档/代码后，请更新此行**（日期 + 版本 + 摘要），并在 CHANGELOG 追加版本
 
 ## 技术栈
