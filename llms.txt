@@ -1,0 +1,73 @@
+# private-knowledge-base
+
+> 文档索引与机器可读入口：内容契约、类型化关系、证据与新鲜度。
+> 生成文件，勿手改。
+
+## Core
+
+- [README](./README.md)
+
+## By type
+
+### tutorial
+
+- [快速开始](./docs/03-快速开始.md) — 从零启动：依赖、环境变量、首次索引与最小可写验证。
+
+### how-to
+
+- [DPanel 部署](./docs/部署-DPanel.md) — DPanel 粘贴 compose 部署：GHCR 镜像、USB 挂载与权限、排障。
+- [Windows 部署](./docs/部署-Windows.md) — Windows + Docker/WSL2 部署：端口、权限、备份与常见问题。
+- [开发指南](./docs/06-开发指南.md) — 本地开发、测试、构建与排障的日常命令。
+- [MCP 接入](./docs/MCP接入.md) — 本地模型通过 MCP 接入的地址、鉴权、工具清单与客户端配置。
+
+### reference
+
+- [API 参考](./docs/05-API参考.md) — HTTP 接口清单：路径、参数、返回码与错误语义。
+- [配置参考](./docs/04-配置参考.md) — 全部环境变量与默认值：vault、备份、索引、鉴权与 LLM。
+- [功能说明](./docs/01-功能说明.md) — 原项目功能基线：笔记库、检索、AI 助手、备份与导出各模块的能力边界。
+- [踩坑记录](./docs/08-踩坑记录.md) — 32 条实测坑的分类索引；正文一坑一篇，机器索引见 docs/_generated/pitfalls.md。
+
+### explanation
+
+- [架构设计](./docs/02-架构设计.md) — 模块划分、分层与数据流：api → agent → core 的单向依赖与索引管线。
+
+## Reports
+
+- [更新日志](./docs/07-更新日志.md) — 0.1.0 之前的逐条版本记录与发布格式；摘要见 CHANGELOG.md。
+- [代码梳理与重构计划](./docs/10-代码梳理与重构计划.md) — 代码梳理与重构的分批计划、验收口径与进度。
+- [技术调研与方案审核](./docs/09-技术调研与方案审核.md) — 检索方案、Obsidian 兼容与 AI 集成的调研过程、实测数据与结论。
+
+## Pitfalls
+
+- [备份目录默认在容器可写层，重建容器就没了](./docs/pitfalls/backup-dir-container-layer.md) — 没配 BACKUP_DIR 时快照落在 /app/backups，容器一删备份全丢。
+- [秒级快照 id 会重复，增量判断与恢复都错](./docs/pitfalls/snapshot-id-collision.md) — 同一秒两次快照 id 相同，prev < snap 恒 False 导致每次全量复制，恢复还可能取错目录。
+- [快照校验拿自己比自己，篡改永远检测不出来](./docs/pitfalls/snapshot-verify-baseline.md) — verify 重新计算当前文件哈希并与自身比，任何篡改都通过。
+- [单 sqlite 连接跨线程并发 → Linux 段错误](./docs/pitfalls/sqlite-thread-segfault.md) — 一个 Fts5Index 连接被索引线程与查询线程同时用，Linux CI 直接段错误。
+- [cron 的 0 是周日，Python weekday() 的 0 是周一](./docs/pitfalls/cron-weekday-offset.md) — 1-5 直接和 dt.weekday() 比，周一被跳过。
+- [容器只能看到挂载点，宿主机磁盘在 DirPicker 里是空的](./docs/pitfalls/docker-host-disks-hidden.md) — 只挂载 /vault 与 /data 时，容器内的 /mnt、/media 是空目录，切库时看不到盘。
+- [Git Bash 里 heredoc 的 \n 会变成字面 /n，污染测试数据](./docs/pitfalls/gitbash-heredoc-newline.md) — python - <<EOF 或 -c 里的 \n 被转成 /n，frontmatter 解析成单行，测试全红但产品没 bug。
+- [jieba 把连字符拆成标点，混进 FTS5 MATCH 会变成 NOT](./docs/pitfalls/jieba-hyphen-token.md) — 空白分词把 docker-compose 拆出 -，裸拼进 MATCH 会被 FTS5 当成 NOT，查询语义反转。
+- [pydantic-ai 2.x 与 1.x API 差异大，照文档写必然踩空](./docs/pitfalls/pydantic-ai-2x.md) — 1.x 的 run_with_tool_approval 在 2.21 已不存在，provider 也变成 Literal 预置名。
+- [id 带随机后缀后，字典序不再等于时间序](./docs/pitfalls/snapshot-id-ordering.md) — -9c93 与 -4515 的字典序和创建顺序相反，sorted 取到错的「最新」。
+- [主线程 close 连接时后台索引线程还在跑 → access violation](./docs/pitfalls/sqlite-close-race.md) — lifespan 退出直接 close，初始索引线程仍在写，Windows 报 access violation。
+- [bytes 字面量不能含中文](./docs/pitfalls/bytes-literal-ascii.md) — b"# 标题" 直接 SyntaxError，必须先 encode。
+- [逐文件推送会制造几十个 commit 和一堆 Actions](./docs/pitfalls/github-per-file-push.md) — Contents API 一次一个文件，70 个文件就是 70 次 push，Actions 列表爆炸。
+- [不熟的框架 HITL 别硬上，先用暂存式写操作](./docs/pitfalls/hitl-pending-store.md) — 框架 approval 流程资料少、调试慢，拖住写操作安全链路；改自研暂存层后行为能被测试锁死。
+- [TestClient 的 httpx 弃用警告：先记录，不急着换](./docs/pitfalls/httpx-deprecation.md) — starlette 提示改用 httpx2，项目装的仍是 httpx 0.28，只影响测试警告。
+- [jieba 首次加载要 0.7 秒，容器里还可能写不了缓存](./docs/pitfalls/jieba-cold-start.md) — 冷启动构建前缀词典约 0.7 秒；缓存目录不可写时每次启动都重新构建。
+- [PyPI 直连偶发 SSL EOF，安装随机失败](./docs/pitfalls/pypi-ssl-eof.md) — pip install 报 UNEXPECTED_EOF_WHILE_READING，重试有时能过。
+- [@agent.tool 默认工具名是函数名，带下划线就会被叫错](./docs/pitfalls/agent-tool-name.md) — def _tool_write_file 注册出的工具名是 _tool_write_file，按 write_file 调用直接 KeyError。
+- [模块级 create_app() 会让配置错误变成 import 失败](./docs/pitfalls/app-factory-placeholder.md) — vault 不存在时 import app.main 直接抛异常，测试和工具都起不来。
+- [next_run 只扫 25 小时，跨周末就找不到](./docs/pitfalls/cron-nextrun-window.md) — 周五 22:30 求「工作日 9:00」的下次执行，窗口内没有候选。
+- [frontmatter 内联列表 [a, b] 被当成标量](./docs/pitfalls/frontmatter-inline-list.md) — 解析器只认块级列表，tags: [a, b] 会被存成一整个字符串。
+- [FTS5 空表 count(*) 返回 NULL，不是 0](./docs/pitfalls/fts5-count-null.md) — build 清空表的瞬间查询 count 拿到 None，int(None) 直接 TypeError。
+- [只 join 初始线程不够，重建线程会撞上已关闭的库](./docs/pitfalls/index-rebuild-thread-leak.md) — rebuild 自己起线程且无人跟踪，lifespan 只 join 初始索引，重建线程报 closed database。
+- [npm 官方源不可达，构建与安装必须换镜像](./docs/pitfalls/npm-registry-blocked.md) — registry.npmjs.org 返回 000，npm install 卡死；npmmirror 返回 200 可用。
+- [只 COPY pyproject.toml 不带 README，pip install . 直接失败](./docs/pitfalls/pip-readme-missing.md) — pyproject 声明 readme = README.md，Dockerfile 没拷这个文件，构建元数据报错。
+- [开发沙箱没有 docker，compose 与镜像只能在用户侧验证](./docs/pitfalls/sandbox-no-docker.md) — 沙箱里 docker --version 都失败，Dockerfile/compose 只能静态审阅，真实构建推迟到部署环境。
+- [tags 预分词后无法还原展示](./docs/pitfalls/tags-pretokenized.md) — 为了检索把 tags 预分词存成空格连接，展示时按逗号切只剩一个词。
+- [TestModel 只生成 dummy 参数，测不了按参数分支的工具](./docs/pitfalls/testmodel-dummy-args.md) — TestModel(call_tools=[...]) 总是传 schema 首值，参数校验类用例会被误判。
+- [watchdog handler 闭包拿不到外部对象，异常还只在后台线程抛](./docs/pitfalls/watchdog-closure.md) — on_any_event 里访问 self.vault 报 AttributeError，pytest 只给一条 unhandled thread warning。
+- [wikilink 正则会误吃 ![[嵌入]]](./docs/pitfalls/wikilink-embed.md) — 嵌入语法 ![[图片.png]] 被当成普通 wikilink，解析出的 target 丢了感叹号语义。
+- [Windows 上 Path.write_text 会把 \n 变成 \r\n](./docs/pitfalls/write-text-crlf.md) — fixture 用 write_text 造文件，读回是 CRLF，字节级断言连环失败。
+- [路径校验顺序错，越界写返回 403 而不是 422](./docs/pitfalls/write-validation-order.md) — ensure_writable 先按「点开头」拦了 ..，越界语义被报成禁写。

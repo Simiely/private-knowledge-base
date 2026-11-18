@@ -3,6 +3,16 @@
 版本号遵循语义化版本；未发布内容记在 `Unreleased`，发布时移入具体版本。
 逐条原始记录见 [`docs/07-更新日志.md`](docs/07-更新日志.md)，本文件只做摘要。
 
+## Unreleased · 2026-11-18
+
+- 文档机器层从 `link-only` 升到 `knowledge`（kit 2.7.4 / spec 2.1.3）：13 篇旧文档补 frontmatter，新增 32 个 `kind: pitfall` 页
+- `docs/08-踩坑记录.md` 改为纯索引：30 条日期式坑 + 2 条真实事故（容器看不到宿主磁盘、备份目录在容器可写层）一坑一篇，正文在 `docs/pitfalls/`
+- 生成物接入：`llms.txt`、`docs/_generated/index.md`、`backlinks.md`、`pitfalls.md`（7 条 active / 25 条 resolved）
+- 规划期风险清单（14 条未发生）迁入 `DEVELOPMENT.md`；调研结论只保留在 `docs/09`，`docs/08` 不再复制
+- `DEVELOPMENT.md` 的 4 条「关键问题」改为坑页入口，避免同一结论写两处
+- README 文档导航补全 03~10；CI 增加 `generate.py --check`
+- 验收：`REPO CHECK: PASS`（ERROR=0, WARN=0, pages=45）、`GENERATE CHECK: PASS`、`KIT LOCK: PASS (v2.7.4, spec=2.1.3, profile=knowledge)`
+
 ## Unreleased · 2026-11-17
 
 - 接入 knowledge-base 的**单项目规范**（spec 2.1.3 / repo-kit 2.7.3，profile `link-only`）

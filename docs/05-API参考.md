@@ -1,3 +1,18 @@
+---
+id: "docs.api-reference"
+title: "API 参考"
+summary: "HTTP 接口清单：路径、参数、返回码与错误语义。"
+type: "reference"
+kind: "note"
+status: "active"
+owner: "@simiely"
+topics: ["development"]
+source_type: "code"
+source: "app/schemas.py"
+last_reviewed: "2026-11-17"
+related: []
+---
+
 # 05 - API 参考
 
 > 后端 REST API 说明。框架为 FastAPI，启动后亦可访问 `http://localhost:8080/docs` 查看自动生成的交互式文档（Swagger UI）。

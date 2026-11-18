@@ -1,3 +1,18 @@
+---
+id: "docs.deploy-windows"
+title: "Windows 部署"
+summary: "Windows + Docker/WSL2 部署：端口、权限、备份与常见问题。"
+type: "how-to"
+kind: "note"
+status: "active"
+owner: "@simiely"
+topics: ["development"]
+source_type: "code"
+source: "docker-compose.yml"
+last_reviewed: "2026-11-17"
+related: []
+---
+
 # Windows / Docker 部署
 
 ## 1. 前置

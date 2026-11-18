@@ -1,3 +1,18 @@
+---
+id: "docs.mcp-setup"
+title: "MCP 接入"
+summary: "本地模型通过 MCP 接入的地址、鉴权、工具清单与客户端配置。"
+type: "how-to"
+kind: "note"
+status: "active"
+owner: "@simiely"
+topics: ["development"]
+source_type: "code"
+source: "app/mcp/server.py"
+last_reviewed: "2026-11-17"
+related: []
+---
+
 # MCP 接入指南（本地模型）
 
 本项目的 MCP 服务是**只读**知识库接口：模型先模糊搜索，再读取全文，不依赖前端对话框。

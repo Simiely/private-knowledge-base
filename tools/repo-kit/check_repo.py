@@ -47,7 +47,7 @@ LINK_SCHEMES = ("http://", "https://", "mailto:", "tel:", "javascript:", "data:"
 ADR_RE = re.compile(r"ADR-(\d{4})-[a-z0-9-]+\.md$")
 ID_RE = re.compile(r"^[a-z0-9]+(\.[a-z0-9-]+)+$")
 PITFALL_FIELDS = ("summary", "symptom", "cause", "detect", "avoid", "recover", "applies_to", "severity")
-KIT_VERSION = "2.7.3"
+KIT_VERSION = "2.7.4"
 SPEC_VERSION = "2.1.3"
 
 
@@ -402,6 +402,27 @@ def is_ignored(rel: str, patterns: list[str]) -> bool:
 
 def is_generated(rel: str, generated: set[str]) -> bool:
     return rel in generated or rel.startswith("docs/_generated/")
+
+
+GENERATED_MARKER = "生成文件，勿手改"
+
+
+def agents_conflict(root: Path, generated: set[str]) -> bool:
+    """AGENTS.md 声明为生成物，但仓库里那份是手写的，且没有模板。
+
+    这种配置下 generate.py 会用内置兜底模板覆盖手写内容，所以两个入口
+    （check_repo 报 ERROR、generate 拒绝写入）共用这一个判断，避免各写一份。
+    """
+    if "AGENTS.md" not in generated:
+        return False
+    path = root / "AGENTS.md"
+    if not path.exists():
+        return False
+    if (root / "schema/agents.template.md").exists():
+        return False
+    # 只看前 5 行：生成标识写在标题下方，正文里引用这句话不算
+    head = "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[:5])
+    return GENERATED_MARKER not in head
 
 
 def matches_basename(rel: str, patterns: list[str]) -> bool:
@@ -1102,6 +1123,13 @@ def main() -> int:
                 report.add("ENTRY_DUP", "ERROR", name, "只允许一行指向 AGENTS.md 的指针，禁止第二份完整规则")
 
     # 生成产物存在性（内容是否最新由 generate.py --check 负责）
+    if agents_conflict(root, generated):
+        report.add(
+            "GENERATED_BLOCKED", "ERROR", "AGENTS.md",
+            "AGENTS.md 是手写文件，且缺 schema/agents.template.md；"
+            "二选一：从 generated_files 移除 AGENTS.md（保留手写），或先补模板再生成。"
+            "在此之前 generate --write 会整轮拒绝写入",
+        )
     for rel in generated:
         if not (root / rel).exists():
             report.add("GENERATED_MISSING", "ERROR", rel, "生成产物缺失，请运行 python scripts/generate.py --root . --write")

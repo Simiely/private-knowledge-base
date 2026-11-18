@@ -81,14 +81,21 @@ $env:MCP_TOKEN="mcp-token"
 
 | 文档 | 用途 |
 |---|---|
-| **[docs/部署-Windows.md](docs/部署-Windows.md)** | Windows + Docker/WSL2 部署、端口、权限、备份、常见问题 |
-| **[docs/部署-DPanel.md](docs/部署-DPanel.md)** | DPanel 粘贴 compose 部署、GHCR 镜像、USB 挂载与权限、排障 |
-| **[docs/MCP接入.md](docs/MCP接入.md)** | MCP 地址、鉴权、工具清单、本地模型客户端配置 |
 | **[AGENTS.md](AGENTS.md)** | 技术栈、关键坑、代码约定、常用命令（改代码前必读） |
 | **[CHANGELOG.md](CHANGELOG.md)** | 版本摘要 |
 | **[docs/01-功能说明.md](docs/01-功能说明.md)** | 原项目功能基线（部分已被新前端取代） |
 | **[docs/02-架构设计.md](docs/02-架构设计.md)** | 模块划分、分层、数据流 |
-| **[docs/08-踩坑记录.md](docs/08-踩坑记录.md)** | 实测坑：索引 / 部署 / 前端 |
+| **[docs/03-快速开始.md](docs/03-快速开始.md)** | 依赖、配置、首次索引与最小验证 |
+| **[docs/04-配置参考.md](docs/04-配置参考.md)** | 全部环境变量与默认值 |
+| **[docs/05-API参考.md](docs/05-API参考.md)** | 接口清单、返回码与错误语义 |
+| **[docs/06-开发指南.md](docs/06-开发指南.md)** | 本地开发、测试、构建与排障 |
+| **[docs/07-更新日志.md](docs/07-更新日志.md)** | 0.1.0 之前的逐条版本记录 |
+| **[docs/08-踩坑记录.md](docs/08-踩坑记录.md)** | 32 条实测坑的分类索引（一坑一篇在 [`docs/pitfalls/`](docs/pitfalls/)） |
+| **[docs/09-技术调研与方案审核.md](docs/09-技术调研与方案审核.md)** | 检索方案与 AI 集成的调研结论 |
+| **[docs/10-代码梳理与重构计划.md](docs/10-代码梳理与重构计划.md)** | 重构分批计划与进度 |
+| **[docs/部署-Windows.md](docs/部署-Windows.md)** | Windows + Docker/WSL2 部署、端口、权限、备份、常见问题 |
+| **[docs/部署-DPanel.md](docs/部署-DPanel.md)** | DPanel 粘贴 compose 部署、GHCR 镜像、USB 挂载与权限、排障 |
+| **[docs/MCP接入.md](docs/MCP接入.md)** | MCP 地址、鉴权、工具清单、本地模型客户端配置 |
 
 ---
 

@@ -1,13 +1,21 @@
 {
-  "version": "2.7.3",
+  "version": "2.7.4",
   "name": "private-knowledge-base",
-  "include": [],
+  "include": [
+    "README.md",
+    "AGENTS.md",
+    "DEVELOPMENT.md",
+    "CHANGELOG.md",
+    "docs/**"
+  ],
   "frontmatter_exempt": {
-    "names": [],
-    "paths": [
-      "*.md",
-      "**/*.md"
-    ]
+    "names": [
+      "AGENTS.md",
+      "CHANGELOG.md",
+      "DEVELOPMENT.md",
+      "README.md"
+    ],
+    "paths": []
   },
   "types": [
     "tutorial",
@@ -80,7 +88,12 @@
     "normal": 365,
     "critical": 90
   },
-  "generated_files": [],
+  "generated_files": [
+    "llms.txt",
+    "docs/_generated/index.md",
+    "docs/_generated/backlinks.md",
+    "docs/_generated/pitfalls.md"
+  ],
   "ignore": [
     ".github/**",
     "tools/**",

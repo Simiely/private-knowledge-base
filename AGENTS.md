@@ -1,6 +1,6 @@
 # AGENTS.md · 项目规则
 
-> 📌 **文档基线**：2026-11-17（commit `c51df4d`）修坏锚点并接入单项目规范机器层（link-only）
+> 📌 **文档基线**：2026-11-18（commit 待填）坑页迁移 + 升 knowledge profile
 > **更新文档/代码后，请更新此行**（日期 + 版本 + 摘要），并在 CHANGELOG 追加版本
 
 ## 技术栈
@@ -15,6 +15,8 @@
 - 部署：Docker / compose（web + mcp + caddy），非 root UID 1000；mount `/vault` 与 `/data`
 
 ## 关键坑（改代码前必看）
+
+> 完整 32 条见 [docs/08-踩坑记录.md](docs/08-踩坑记录.md)（一坑一篇，含检测与退出方式）；这里只留最容易致命的 10 条。
 
 - **SQLite 连接不能跨线程共用**：CI 实测 Linux 段错误；Windows 上并发关闭连接会 access violation → 每线程独立连接，用完即关
 - **jieba 分词结果不能直接拼进 FTS5 MATCH**：连字符会被拆成独立标点 token，混入后可能变成 NOT 运算符 → 分词后过滤标点，必要时给 token 加引号

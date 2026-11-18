@@ -42,41 +42,17 @@ agent/   llm(模型串) · tools(类型化工具) · loop(会话+HITL) · safety
 
 ## 关键问题与方案
 
-### 问题：单条 SQLite 连接跨线程使用导致段错误
+### 已拆成独立坑页的问题
 
-**TL;DR**：`sqlite3` 连接不是线程安全的，并发关闭更危险。
+下面四条都已按 `kind: pitfall` 一坑一篇（症状 / 根因 / 怎么发现 / 怎么避免 / 怎么退出），
+这里只留入口，避免同一结论写两遍：
 
-- 问题：CI 在 Linux 上偶发段错误；Windows 上并发关闭连接报 access violation
-- 根因：同一连接被多个线程共用，且关闭时机与查询竞争
-- 解决：每线程独立连接，用完即关；写操作集中到单一执行点
-- 预防：任何 `sqlite3.connect` 都不要跨线程传递
+- [单 sqlite 连接跨线程并发 → Linux 段错误](docs/pitfalls/sqlite-thread-segfault.md)
+- [jieba 把连字符拆成标点，混进 FTS5 MATCH 会变成 NOT](docs/pitfalls/jieba-hyphen-token.md)
+- [FTS5 空表 count(*) 返回 NULL，不是 0](docs/pitfalls/fts5-count-null.md)
+- [备份目录默认在容器可写层，重建容器就没了](docs/pitfalls/backup-dir-container-layer.md)
 
-### 问题：中文检索偶发「一个词都搜不到」
-
-**TL;DR**：jieba 分出的标点 token 混进 FTS5 MATCH，语义被改写。
-
-- 问题：带连字符或特殊符号的关键词，命中率突然变成 0
-- 根因：jieba 把连字符拆成独立标点 token，而 FTS5 MATCH 里某些符号是运算符（如 NOT）
-- 解决：分词结果先过滤标点，再拼查询；必要时对 token 加引号
-- 预防：分词输出永远不要直接拼进查询串
-
-### 问题：空库统计不是 0 而是「空」
-
-**TL;DR**：FTS5 空表 `count(*)` 返回 NULL。
-
-- 问题：新库首屏统计显示异常或前端拿到 null 崩掉
-- 根因：FTS5 对空表的聚合返回 NULL，不是 0
-- 解决：查询侧统一 `COALESCE(count(*), 0)`
-- 预防：所有 FTS5 聚合都按「可能返回 NULL」处理
-
-### 问题：容器重建后备份全丢
-
-**TL;DR**：默认备份目录在容器可写层。
-
-- 问题：`docker compose down && up` 之后，备份列表空了
-- 根因：默认 `{项目根}/backups` 在镜像可写层，容器重建即销毁
-- 解决：compose 显式 `BACKUP_DIR=/data/backups`（挂载盘）
-- 预防：任何「需要持久化」的路径都要显式落在 volume 上，不依赖默认值
+全部 32 条的入口见 [docs/08-踩坑记录.md](docs/08-踩坑记录.md)。
 
 ### 问题：干净环境 CI 里首页测试 404
 
@@ -86,6 +62,68 @@ agent/   llm(模型串) · tools(类型化工具) · loop(会话+HITL) · safety
 - 根因：`test_static_index_served` 依赖 `frontend/dist`，而 CI 从不构建前端
 - 解决：test job 增加 `setup-node` + `npm ci && npm run build`；`dist` 缺失时该用例 `pytest.skip`
 - 预防：测试依赖构建产物时，要么在流水线里构建，要么显式 skip，不要默认它存在
+
+## 规划期风险与对策（未发生）
+
+> 从 `docs/08-踩坑记录.md` 的「预判风险清单」迁入；原 #15/#16 已实际发生，改为坑页：
+> [容器看不到宿主磁盘](docs/pitfalls/docker-host-disks-hidden.md)、[备份目录在容器可写层](docs/pitfalls/backup-dir-container-layer.md)。
+> 以下 14 条是设计期预判，逐条在对应里程碑验证；验证后若真发生，迁成 `kind: pitfall` 页。
+
+### 1. Obsidian 特殊语法被编辑器破坏
+- **风险**：md 含 frontmatter、`[[]]`、callout（`> [!note]`）、`==高亮==`、内嵌 LaTeX。若编辑/保存时做任何"规范化"重写，会毁掉整个库。
+- **对策**：编辑视图 = 纯文本原样保存（不 WYSIWYG）；渲染只发生在阅读视图；保存逻辑对内容零改写。测试用例锁死「读入 → 写出 → 字节一致」。
+
+### 2. 中文全文检索命中率差
+- **风险**：SQLite FTS5 默认 unicode61 tokenizer 对中文按字切分，搜"分词"可能搜不到"分词方案"中的连续词，且无词义。
+- **对策**：jieba 分词后入库（内容存一份分词串 + 保留原文做高亮）；检索时同样分词；`fts5` 用 `tokenize='unicode61'` + 自定义预分词。用例：搜「docker」命中 "Docker 部署"，搜「分词」命中 "中文分词方案"。
+
+### 3. 容器写权限（PUID/PGID）
+- **风险**：容器内非 root 用户与宿主机 uid 不一致 → vault 写入"权限拒绝"。
+- **对策**：支持 `PUID/PGID` 环境变量切换运行用户；Linux 部署文档明确说明 `id -u` 步骤。测试：以非 root 用户写入挂载目录。
+
+### 4. watchdog 事件风暴
+- **风险**：大库首次启动时文件系统事件堆积，或 Obsidian 批量保存触发大量事件 → 索引疯狂重建。
+- **对策**：debounce（默认 2s）+ 每文件去重（按 mtime+size 判断是否真变更）+ 增量队列上限。
+
+### 5. Agent 误操作破坏笔记
+- **风险**：LLM 生成的写入内容可能有误（删错段落、截断文件、编码混乱）。
+- **对策**：写前强制备份到 `data/backups/`；写操作必须用户确认（SSE `tool` 事件 + `/api/agent/confirm`）；`MAX_FILE_BYTES` 以上禁止重写；禁写 `.obsidian/` 等目录。测试：模拟工具调用全链路。
+
+### 6. 编码与换行符（Windows 历史文件）
+- **风险**：部分 md 可能是 GBK / UTF-8 带 BOM；LF/CRLF 混用。读错乱码，写错破坏全文。
+- **对策**：读取用 `utf-8-sig`（自动去 BOM）→ 解码失败回退 GBK；**写入恒为 UTF-8 无 BOM**，换行保留原文件风格（检测首个换行符）。测试：造 GBK/带 BOM/CRLF 三种 fixture。
+
+### 7. 路径穿越（安全）
+- **风险**：API 参数 `path=../../etc/passwd` 越界读、写任意文件。
+- **对策**：后端统一 `core/vault.py` 的 `resolve_safe_path()`，`pathlib.resolve()` 后必须仍位于 vault 根内；拒绝绝对路径/盘符/`..`；API 层一律走该校验函数。测试：路径穿越用例必须覆盖。
+
+### 8. markdown 渲染库对 Obsidian 语法支持不全
+- **风险**：渲染库默认不支持 callout / wikilink / 高亮 / 嵌入。
+- **对策**：直接用 `@quartz-community/obsidian-flavored-markdown`（Quartz 官方插件包，remark 生态）+ Mermaid 懒加载。阅读视图 CSS 尽量贴近 Obsidian 观感（深色/浅色跟随）。
+
+### 9. LLM API key 泄漏
+- **风险**：key 写进代码 / 镜像 / 前端 bundle。
+- **对策**：key 只进 `.env`（compose `env_file`）；前端不接触 key（Agent 调用全在后端）；日志脱敏（`LOG_LEVEL=debug` 时 key 打码）。检查项：`docker history` 无 key、`grep -r key frontend/dist` 为空。
+
+### 10. 大库全量索引慢 / 中断
+- **风险**：数万文件首次索引分钟级，中途崩溃则白干。
+- **对策**：分批（`INDEX_BATCH_SIZE`）+ 事务提交 + 断点续传（记录已索引文件 mtime 快照，重启后跳过未变更文件）；进度经 `/api/index/status` 上报。
+
+### 11. 备份目录放错位置（自我递归/污染）
+- **风险**：备份目录若建在 vault 内部，会被索引、被下一个快照再次备份、甚至被"整库恢复"覆盖自身 → 备份链断裂。
+- **对策**：强制 `BACKUP_DIR` 位于 vault 之外（默认 `{项目根}/backups`，Docker 内 `/app/backups`）；启动时校验若在 vault 内直接报错退出；`IGNORE_DIRS` 永远包含备份目录。测试：误配置在 vault 内 → 启动失败提示。
+
+### 12. 快照一致性（文件写入中）
+- **风险**：快照扫描时 Obsidian/用户正在写文件 → 快照里出现半截文件。
+- **对策**：快照对单个文件先复制到临时再置位（或对 >1MB 文件做双读校验）；失败重试 3 次仍不一致则跳过并记 warning。测试：快照过程中并发修改文件。
+
+### 13. 硬链接增量在跨卷/部分文件系统失效
+- **风险**：NTFS/APFS/ext4 支持硬链接，但 FAT32/exFAT、跨 volume 挂载时硬链接会失败或静默复制。
+- **对策**：`os.link` 失败自动降级为复制；快照 manifest 记录"链接/复制"方式，校验时按 manifest 处理。测试：临时目录用不支持硬链接的挂载点（或 mock link 抛错）验证降级。
+
+### 14. 整库恢复误操作
+- **风险**：恢复方向反了 / 选错快照 / 恢复中中断 → vault 数据比恢复前更糟。
+- **对策**：恢复前**强制先建"恢复前快照"**；双确认（UI 输入 `RESTORE` 确认码）；恢复期间服务进入只读模式；支持恢复任务中断后的继续/回滚。测试：恢复流程全链路 + 中断恢复。
 
 ## 相关文档
 

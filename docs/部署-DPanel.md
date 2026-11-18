@@ -1,3 +1,18 @@
+---
+id: "docs.deploy-dpanel"
+title: "DPanel 部署"
+summary: "DPanel 粘贴 compose 部署：GHCR 镜像、USB 挂载与权限、排障。"
+type: "how-to"
+kind: "note"
+status: "active"
+owner: "@simiely"
+topics: ["development"]
+source_type: "code"
+source: "docker-compose.yml"
+last_reviewed: "2026-11-17"
+related: []
+---
+
 # DPanel + USB 部署
 
 > 适用场景：Linux 宿主机 + DPanel（直接粘贴 compose 文本）+ 外置 USB 盘放笔记库。
